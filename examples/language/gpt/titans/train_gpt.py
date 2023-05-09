@@ -15,7 +15,7 @@ from colossalai.nn import LinearWarmupLR
 from colossalai.trainer import Trainer, hooks
 from colossalai.utils import colo_set_process_memory_fraction, is_using_pp
 from colossalai.utils.timer import MultiTimer
-from colossalai.zero.init_ctx import ZeroInitContext
+# from colossalai.zero.init_ctx import ZeroInitContext
 
 
 def calc_local_model_size(model: torch.nn.Module):
@@ -57,9 +57,11 @@ def main():
     use_zero3 = hasattr(gpc.config, 'zero')
     ctx = contextlib.nullcontext()
     if use_zero3:
-        ctx = ZeroInitContext(target_device=torch.cuda.current_device(),
-                              shard_strategy=gpc.config.zero.model_config.shard_strategy,
-                              shard_param=True)
+        print("no that module")
+        exit(1)
+        # ctx = ZeroInitContext(target_device=torch.cuda.current_device(),
+        #                       shard_strategy=gpc.config.zero.model_config.shard_strategy,
+        #                       shard_param=True)
     with ctx:
         model = gpc.config.model.pop('type')(**gpc.config.model)
     if use_pipeline and use_interleaved and not isinstance(model, nn.ModuleList):
@@ -101,13 +103,25 @@ def main():
     # hooks.LogMemoryByEpochHook(logger),
     # hooks.LogTimingByEpochHook(timer, logger),
     ]
-    trainer.fit(train_dataloader=train_dataloader,
-                epochs=gpc.config.NUM_EPOCHS,
-                test_interval=1,
-                hooks=hook_list,
-                display_progress=True,
-                return_output_label=False)
-
+    
+    from torch.profiler import ProfilerActivity, profile, schedule, tensorboard_trace_handler
+    warmup_steps = 3
+    active_steps = 1
+    save_dir = "./profiling"
+    demo_profiler = profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
+                            schedule=schedule(wait=0, warmup=warmup_steps, active=active_steps),
+                            on_trace_ready=tensorboard_trace_handler(save_dir),
+                            record_shapes=True,
+                            profile_memory=True)
+    with demo_profiler as prof:
+        for _ in range(1):
+            trainer.fit(train_dataloader=train_dataloader,
+                        epochs=gpc.config.NUM_EPOCHS,
+                        test_interval=1,
+                        hooks=hook_list,
+                        display_progress=True,
+                        return_output_label=False)
+            prof.step()
 
 if __name__ == '__main__':
     main()

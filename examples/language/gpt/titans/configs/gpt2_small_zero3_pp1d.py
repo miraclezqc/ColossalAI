@@ -1,7 +1,7 @@
 from model import GPT2_small_pipeline_hybrid
 
 from colossalai.nn.optimizer import HybridAdam
-from colossalai.zero.shard_utils import TensorShardStrategy
+# from colossalai.zero.shard_utils import TensorShardStrategy
 
 BATCH_SIZE = 8
 NUM_EPOCHS = 10
@@ -11,8 +11,8 @@ HIDDEN_SIZE = 768
 TENSOR_SHAPE = (BATCH_SIZE // NUM_MICRO_BATCHES, SEQ_LEN, HIDDEN_SIZE)
 
 # if you do no want zero, just comment out this dictionary
-zero = dict(model_config=dict(tensor_placement_policy='cuda', shard_strategy=TensorShardStrategy()),
-            optimizer_config=dict(initial_scale=2**5))
+# zero = dict(model_config=dict(tensor_placement_policy='cuda', shard_strategy=TensorShardStrategy()),
+#             optimizer_config=dict(initial_scale=2**5))
 
 optimizer = dict(
     type=HybridAdam,
